@@ -1,0 +1,18 @@
+# LangChain och LLM
+langchain==0.1.0
+openai==1.29.0
+
+# PDF-läsning
+pypdf==3.16.0
+
+# Vektordatabas
+faiss-cpu==1.11.0
+
+# Tokenisering för embeddings
+tiktoken==0.12.0
+
+# Webgränssnitt
+streamlit==1.25.0
+
+# Hjälpbibliotek
+numpy==1.26.0
