@@ -24,8 +24,9 @@ class Settings(BaseSettings):
     ]
 
     # Chatbot settings
-    MAX_CONTEXT_LENGTH: int = 600
-    MODEL_NAME: str = "google/mt5-small"
+    MAX_CONTEXT_LENGTH: int = 4000  # Ökad för mer kontext
+    NUM_DOCUMENTS: int = 8  # Antal dokument att hämta från FAISS
+    MODEL_NAME: str = "google/flan-t5-base"
     EMBEDDING_MODEL: str = "sentence-transformers/paraphrase-multilingual-mpnet-base-v2"
 
     # Paths (relativa till projektrot)
@@ -37,5 +38,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "ignore"  # Ignorera extra variabler i .env
 
 settings = Settings()

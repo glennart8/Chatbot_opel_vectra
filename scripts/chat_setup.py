@@ -46,7 +46,8 @@ print(f"Totalt antal tecken extraherade: {len(text)}")
 docs = [Document(page_content=text)]
 
 # --- Dela upp i chunks ---
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=650, chunk_overlap=150)
+# Större chunks för att behålla mer kontext (t.ex. hela felsökningstabeller)
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=1500, chunk_overlap=300)
 docs_split = text_splitter.split_documents(docs)
 print(f"Antal chunks: {len(docs_split)}")
 
