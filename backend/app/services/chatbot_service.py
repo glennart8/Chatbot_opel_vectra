@@ -113,18 +113,39 @@ class ChatbotService:
             'väger': ['vikt', 'kg'],
             'vikt': ['vikt', 'kg'],
             'tung': ['vikt', 'kg'],
-            'effekt': ['motoreffekt', 'kw'],
-            'stark': ['motoreffekt', 'kw'],
+            'effekt': ['motoreffekt', 'kw', 'watt'],
+            'stark': ['motoreffekt', 'kw', 'watt'],
             'tank': ['tankvolym', 'liter', 'cm3'],
-            'bränsle': ['bränsle', 'tank'],
-            'olja': ['olja', 'tank'],
-            'ljud': ['ljudnivå', 'db'],
-            'buller': ['buller', 'ljudeffekt'],
+            'bränsle': ['bränsle', 'tank', 'bensin'],
+            'olja': ['olja', 'tank', 'kedjeolja'],
+            'ljud': ['ljudnivå', 'db', 'decibel'],
+            'buller': ['buller', 'ljudeffekt', 'db'],
             'vibration': ['vibration', 'm/s'],
-            'kedja': ['kedja', 'svärd'],
-            'svärd': ['svärd', 'tum', 'cm'],
-            'specifikation': ['motoreffekt', 'vikt', 'tank'],
-            'teknisk': ['motoreffekt', 'vikt', 'tank'],
+            'kedja': ['kedja', 'svärd', 'sågkedja', 'delning', 'tum', 'skärlängd', 'svärdslängd'],
+            'svärd': ['svärd', 'tum', 'cm', 'svärdslängd', 'skärlängd', 'delning'],
+            'typ': ['typ', 'modell', 'specifikation', 'rekommenderad'],
+            'delning': ['delning', 'tum', 'mm', 'kedja'],
+            'specifikation': ['motoreffekt', 'vikt', 'tank', 'specifikation'],
+            'teknisk': ['motoreffekt', 'vikt', 'tank', 'teknisk'],
+            'förvar': ['förvaring', 'transport', 'långtidsförvaring'],
+            'transport': ['transport', 'förvaring'],
+            'starta': ['starta', 'start', 'motor'],
+            'stopp': ['stanna', 'stoppa', 'motor'],
+            'filter': ['luftfilter', 'bränslefilter', 'filter'],
+            'rengör': ['rengör', 'rensa', 'underhåll'],
+            'underhåll': ['underhåll', 'service', 'rengör'],
+            'problem': ['felsökning', 'problem', 'startar inte'],
+            'funkar inte': ['felsökning', 'problem', 'startar inte'],
+            'kassera': ['kassering', 'avfall', 'miljö'],
+            # Nya för batteridriven såg och jämförelser
+            'batteri': ['batteri', 'laddning', 'laddare', 'ah', 'volt'],
+            'ladda': ['ladda', 'laddning', 'laddare', 'batteri'],
+            'jämför': ['435', '542i', 'modell', 'specifikation'],
+            'skillnad': ['435', '542i', 'modell', 'specifikation'],
+            '435': ['435', 'bensin', 'modell'],
+            '542': ['542i', 'batteri', 'modell'],
+            'bensin': ['bensin', 'bränsle', '435', 'tank'],
+            'el': ['batteri', 'laddning', '542i', 'elektrisk'],
         }
 
         for word, terms in keyword_map.items():
@@ -159,8 +180,8 @@ class ChatbotService:
                     content_lower = doc.page_content.lower()
                     # Räkna hur många nyckelord som matchar
                     match_count = sum(1 for kw in keywords if kw in content_lower)
-                    # Kräv minst 2 nyckelordsmatchningar för att prioritera
-                    if match_count >= 2:
+                    # Kräv minst 1 nyckelordsmatchning för att prioritera
+                    if match_count >= 1:
                         if doc not in docs:
                             keyword_docs.append((match_count, doc))
                             logger.info(f"Lade till dokument via nyckelordssökning ({match_count} matchningar): {doc.page_content[:50]}...")
@@ -191,17 +212,32 @@ class ChatbotService:
             cleaned_context = context.replace('\n', ' ').strip()
 
             # Skapa prompt för Gemini
-            prompt = f"""Du är en hjälpsam assistent för Husqvarna motorsågar.
-Din uppgift är att svara på användarens fråga baserat på informationen från bruksanvisningen.
+            prompt = f"""Du är en vänlig och kunnig expert på Husqvarna motorsågar. Du hjälper användare med deras frågor på ett avslappnat och naturligt sätt, som om du pratar med en kompis som behöver hjälp.
 
-KONTEXT FRÅN BRUKSANVISNING:
+Du har tillgång till information om FLERA Husqvarna-modeller:
+- Husqvarna 435 (bensindriven)
+- Husqvarna 542i XP (batteridriven)
+
+REGLER FÖR DIN TON:
+- Var personlig och vänlig, men inte överdriven
+- Använd vardagligt språk, undvik stelt "kundtjänst-språk"
+- Ge konkreta och praktiska svar
+- Om du ger instruktioner, gör dem enkla att följa
+- Det är okej att vara lite entusiastisk om motorsågar!
+
+REGLER FÖR JÄMFÖRELSER:
+- Om användaren frågar om en specifik modell, fokusera på den
+- Om användaren vill jämföra, lyft fram skillnader tydligt
+- Ange alltid vilken modell informationen gäller
+- Kontexten är taggad med [MODELL: ...] för att visa vilken såg texten gäller
+
+KONTEXT FRÅN BRUKSANVISNINGAR:
 {cleaned_context}
 
 ANVÄNDARENS FRÅGA:
 {query}
 
-Ge ett tydligt och koncist svar på svenska baserat på informationen i bruksanvisningen.
-Om informationen inte finns i kontexten, säg det tydligt."""
+Svara på svenska. Om informationen inte finns i kontexten, var ärlig med det men försök ändå vara hjälpsam."""
 
             # Generera svar med Gemini
             response = self.gemini_model.generate_content(prompt)

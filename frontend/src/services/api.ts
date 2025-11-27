@@ -4,7 +4,8 @@
 import axios from 'axios';
 import type { ChatRequest, ChatResponse, HealthResponse } from '../types/chat';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// I Docker används relativ URL (nginx proxar till backend), lokalt används localhost:8000
+const API_BASE_URL = import.meta.env.VITE_API_URL ?? '';
 const API_VERSION = '/api/v1';
 
 // Skapa axios instance med base URL

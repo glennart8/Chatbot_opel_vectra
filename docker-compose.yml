@@ -7,12 +7,16 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      # Mappa data och faiss_index från projektrot till container
+      # Mappa källkod för live reload (ändra kod utan rebuild)
+      - ./backend/app:/code/backend/app
+      # Mappa data och faiss_index
       - ./data:/code/data:ro
       - ./faiss_index:/code/faiss_index:ro
     env_file:
       - .env
     restart: unless-stopped
+    # Använd --reload för auto-restart vid kodändringar
+    command: uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
       interval: 30s

@@ -8,42 +8,65 @@ import os
 
 load_dotenv()
 
-# --- Läs PDF och rensa text ---
-pdf_file = "data/husqvarna435.pdf"  # Husqvarna 435 manual
-reader = PdfReader(pdf_file)
+# --- Konfigurera vilka PDF:er som ska läsas in ---
+PDF_CONFIGS = [
+    {
+        "file": "data/husqvarna435.pdf",
+        "model": "Husqvarna 435",
+        "start_page": 112,  # Svenska sektionen börjar här (1-baserat)
+        "end_page": None,   # None = läs till slutet
+    },
+    {
+        "file": "data/husqvarna542i.pdf",
+        "model": "Husqvarna 542i XP",
+        "start_page": 1,    # Svenska sektionen börjar på sida 1
+        "end_page": 44,     # Läs till sida 44
+    },
+]
 
-text = ""
-print(f"Läser in text från PDF: {pdf_file}")
-print(f"Totalt antal sidor i PDF: {len(reader.pages)}")
+def read_pdf(config):
+    """Läs in en PDF och returnera text med modelltagg"""
+    pdf_file = config["file"]
+    model_name = config["model"]
 
-# DEFINIERA SIDINTERVALL - Svenska manualen börjar på sida 112
-START_INDEX = 111   # Index för Sida 112 (0-baserat index)
-END_INDEX = len(reader.pages)    # Läs till slutet av PDF:en
+    if not os.path.exists(pdf_file):
+        print(f"VARNING: {pdf_file} finns inte, hoppar över...")
+        return ""
 
-print(f"Läser svenska sektionen: Sida {START_INDEX + 1} till {END_INDEX}")
+    reader = PdfReader(pdf_file)
 
-# Ändra loopen för att iterera över sidor i intervallet [START_INDEX, END_INDEX)
-for i in range(START_INDEX, END_INDEX):
-    if i < len(reader.pages):
+    # Konvertera till 0-baserat index
+    start_idx = config["start_page"] - 1
+    end_idx = config["end_page"] if config["end_page"] else len(reader.pages)
+
+    print(f"\n--- Läser {model_name} ---")
+    print(f"Fil: {pdf_file}")
+    print(f"Totalt antal sidor i PDF: {len(reader.pages)}")
+    print(f"Läser sidor: {start_idx + 1} till {end_idx}")
+
+    text = ""
+    for i in range(start_idx, min(end_idx, len(reader.pages))):
         page = reader.pages[i]
         page_text = page.extract_text()
+        page_text = page_text.replace("\n", " ").strip()
+        text += page_text + "\n"
 
-        if page_text:
-            # Ta bort onödiga radbrytningar
-            page_text = page_text.replace("\n", " ").strip()
-            text += page_text + "\n"
-        else:
-            # Kan vara bra att se om någon sida är tom p.g.a. OCR-problem
-            print(f"Varning: Sida {i+1} gav ingen text vid extraktion.")
-    else:
-        # Detta bör inte hända
-        print(f"Varning: Försökte läsa sida {i+1}, men PDF:en slutade.")
-        break
+    # Lägg till modelltagg i början av texten så AI:n vet vilken såg det gäller
+    tagged_text = f"[MODELL: {model_name}]\n{text}"
 
-print(f"Totalt antal tecken extraherade: {len(text)}")
+    print(f"Antal tecken extraherade: {len(text)}")
+    return tagged_text
+
+# --- Läs in alla PDF:er ---
+all_text = ""
+for config in PDF_CONFIGS:
+    all_text += read_pdf(config) + "\n\n"
+
+print(f"\n--- Totalt ---")
+print(f"Totalt antal tecken från alla PDF:er: {len(all_text)}")
 
 # --- Skapa Document-objekt ---
-docs = [Document(page_content=text)]
+docs = [Document(page_content=all_text)]
 
 # --- Dela upp i chunks ---
 # Större chunks för att behålla mer kontext (t.ex. hela felsökningstabeller)
@@ -52,7 +75,7 @@ docs_split = text_splitter.split_documents(docs)
 print(f"Antal chunks: {len(docs_split)}")
 
 # --- Skapa embeddings (lokalt HuggingFace, gratis) ---
-print("Skapar embeddings med HuggingFace...")
+print("\nSkapar embeddings med HuggingFace...")
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
 
 # --- Skapa FAISS-index ---
@@ -61,3 +84,4 @@ vectorstore = FAISS.from_documents(docs_split, embeddings)
 # --- Spara index lokalt ---
 vectorstore.save_local("faiss_index")
 print("FAISS-index sparat som 'faiss_index'")
+print("\nKlart! Du kan nu ställa frågor om båda sågarna.")
